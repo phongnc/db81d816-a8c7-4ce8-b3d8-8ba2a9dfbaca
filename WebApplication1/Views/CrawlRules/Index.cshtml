@@ -1,0 +1,54 @@
+﻿@model IEnumerable<WebApplication1.Models.CrawlRule>
+
+@{
+    ViewBag.Title = "Index";
+    int _RuleBreadcrumbId = ViewBag.CrawlRuleId;
+}
+
+<h2>Index</h2>
+<p>@Html.Partial("_RuleBreadcrumb", _RuleBreadcrumbId)</p>
+
+<p>
+    @Html.ActionLink("Create New", "Create", new { id = ViewBag.CrawlRuleId }) 
+</p>
+<table class="table">
+    <tr>
+        <th>
+            @Html.DisplayNameFor(model => model.CrawlSiteId)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.CrawlParentId)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.CrawlRuleFor)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.CrawlRuleQuery)
+        </th>
+        <th></th>
+    </tr>
+
+@foreach (var item in Model) {
+    <tr>
+        <td>
+            @Html.DisplayFor(modelItem => item.CrawlSiteId)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.CrawlParentId)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.CrawlRuleFor)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.CrawlRuleQuery)
+        </td>
+        <td>
+            @Html.ActionLink("Children", "Index", new { id = item.CrawlRuleId }) |
+            @Html.ActionLink("Edit", "Edit", new { id = item.CrawlRuleId }) |
+            @Html.ActionLink("Details", "Details", new { id = item.CrawlRuleId }) |
+            @Html.ActionLink("Delete", "Delete", new { id = item.CrawlRuleId })
+        </td>
+    </tr>
+}
+
+</table>

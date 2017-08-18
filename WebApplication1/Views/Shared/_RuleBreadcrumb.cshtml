@@ -1,0 +1,19 @@
+﻿@using WebApplication1.Models
+@model int
+@{
+    RuleBreadcrumbModel _Model = new WebApplication1.Models.RuleBreadcrumbModel() { Id = Model, Title = "" };
+    var list = _Model.getRuleBreadcrumb();
+    for (int i = list.Count - 1; i >= 0; i--)
+    {
+        if (i == 0)
+        {
+            @Html.ActionLink(list[i].Title, "", new { id = list[i].Id });
+        }
+        else
+        {
+            @Html.ActionLink(list[i].Title + " -> ", "Index", new { id = list[i].Id });
+        }
+    }
+}
+
+

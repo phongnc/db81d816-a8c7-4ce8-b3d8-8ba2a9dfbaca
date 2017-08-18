@@ -1,0 +1,42 @@
+﻿@model WebApplication1.Models.CrawlSite
+
+@{
+    ViewBag.Title = "Details";
+}
+
+<h2>Details</h2>
+
+<div>
+    <h4>CrawlSite</h4>
+    <hr />
+    <dl class="dl-horizontal">
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlSiteUrl)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlSiteUrl)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlSiteTitle)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlSiteTitle)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlSiteNote)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlSiteNote)
+        </dd>
+
+    </dl>
+</div>
+<p>
+    @Html.ActionLink("Edit", "Edit", new { id = Model.CrawlSiteId }) |
+    @Html.ActionLink("Back to List", "Index")
+</p>

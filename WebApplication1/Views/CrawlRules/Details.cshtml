@@ -1,0 +1,130 @@
+﻿@model WebApplication1.Models.CrawlRule
+
+@{
+    ViewBag.Title = "Details";
+}
+
+<h2>Details</h2>
+
+<div>
+    <h4>CrawlRule</h4>
+    <hr />
+    <dl class="dl-horizontal">
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlSiteId)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlSiteId)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlParentId)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlParentId)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlRuleFor)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlRuleFor)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlRuleQuery)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlRuleQuery)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlRuleTag)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlRuleTag)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlRuleClass)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlRuleClass)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlRuleStart)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlRuleStart)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlRuleEnd)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlRuleEnd)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlRuleIndex)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlRuleIndex)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlRuleRegex)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlRuleRegex)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlRuleFormat)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlRuleFormat)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlRuleReplace)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlRuleReplace)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlRuleJson)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlRuleJson)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.CrawlRuleNote)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CrawlRuleNote)
+        </dd>
+
+    </dl>
+</div>
+<p>
+    @Html.ActionLink("Edit", "Edit", new { id = Model.CrawlRuleId }) |
+    @Html.ActionLink("Back to List", "Index")
+</p>

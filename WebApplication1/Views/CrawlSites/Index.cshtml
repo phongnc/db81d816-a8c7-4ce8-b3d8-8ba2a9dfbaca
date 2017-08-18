@@ -1,0 +1,46 @@
+﻿@model IEnumerable<WebApplication1.Models.CrawlSite>
+
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>Index</h2>
+
+<p>
+    @Html.ActionLink("Create New", "Create")
+</p>
+<table class="table">
+    <tr>
+        <th>
+            @Html.DisplayNameFor(model => model.CrawlSiteUrl)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.CrawlSiteTitle)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.CrawlSiteNote)
+        </th>
+        <th></th>
+    </tr>
+
+@foreach (var item in Model) {
+    <tr>
+        <td>
+            @Html.DisplayFor(modelItem => item.CrawlSiteUrl)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.CrawlSiteTitle)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.CrawlSiteNote)
+        </td>
+        <td>
+            @Html.ActionLink("Rules", "Rules", new { id = item.CrawlSiteId }) |
+            @Html.ActionLink("Edit", "Edit", new { id = item.CrawlSiteId }) |
+            @Html.ActionLink("Details", "Details", new { id=item.CrawlSiteId }) |
+            @Html.ActionLink("Delete", "Delete", new { id=item.CrawlSiteId })
+        </td>
+    </tr>
+}
+
+</table>

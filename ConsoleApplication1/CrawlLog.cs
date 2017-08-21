@@ -18,5 +18,14 @@ namespace ConsoleApplication1
         public string CrawlLogUrlEncode { get; set; }
 
         public int? CrawlLogRuleId { get; set; }
+
+        [StringLength(500)]
+        public string CrawlLogUnique { get; set; }
+
+        [StringLength(50)]
+        public string CrawlLogType { get; set; }
+
+        [Column(TypeName = "datetime2")]
+        public DateTime? CrawlLogDate { get; set; }
     }
 }

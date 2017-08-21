@@ -10,7 +10,8 @@ namespace ConsoleApplication1
     {
         static void Main(string[] args)
         {
-            CrawlClient client = new CrawlClient("demo2");
+            string site = Console.ReadLine();
+            CrawlClient client = new CrawlClient(site);
         }
     }
 }

@@ -109,44 +109,84 @@ namespace ConsoleApplication1
         Model1 db = new Model1();
         CrawlSite site;
         CrawlRule rootrule;
-        Queue<CrawlLog> logs;
+        Stack<CrawlLog> logs;
         public CrawlClient(string title)
         {
             site = db.CrawlSites.First(o => o.CrawlSiteTitle == title);
             rootrule = db.CrawlRules.First(o => o.CrawlSiteId == site.CrawlSiteId && o.CrawlRuleFor == "Root");
-            logs = new Queue<CrawlLog>();
-            CrawlLog _log = new CrawlLog();
-            _log.CrawlLogUrl = site.CrawlSiteUrl;
-            _log.CrawlLogRuleId = rootrule.CrawlRuleId;
-            logs.Enqueue(_log);
+            List<CrawlRule> rules = db.CrawlRules.Where(o => o.CrawlParentId == rootrule.CrawlRuleId).ToList();
+            logs = new Stack<CrawlLog>();
+            if (string.IsNullOrEmpty(site.CrawlSiteUrl)) return;
+            if (site.CrawlSiteUrl.Length < 2) return;
+            if (rules.Count == 0) return;
+            foreach (CrawlRule rule in rules) logs.Push(new CrawlLog() { CrawlLogUrl = site.CrawlSiteUrl, CrawlLogRuleId = rule.CrawlRuleId });
             while (logs.Count > 0)
                 ProcessQueue();
         }
         void ProcessQueue()
         {
-            var log = logs.Dequeue();
+            var log = logs.Pop();
             var rule = db.CrawlRules.First(o => o.CrawlRuleId == log.CrawlLogRuleId);
-            var subrules = db.CrawlRules.Where(o => o.CrawlParentId == rule.CrawlRuleId).ToList();
-            if (subrules.Count > 0)
+            if (string.IsNullOrEmpty(log.CrawlLogUrl)) return;
+            if (log.CrawlLogUrl.Length < 2) return;
+            string content = "";
+            using (WebClient webClient = new WebClient())
             {
-                string content = "";
-                using (WebClient webClient = new WebClient())
+                webClient.Encoding = Encoding.UTF8;
+                content = webClient.DownloadString(log.CrawlLogUrl);
+                List<string> _result = RuleExcecute(rule, content);
+                db.CrawlLogs.Add(new CrawlLog() {
+                    CrawlLogUrl = log.CrawlLogUrl,
+                    CrawlLogUrlEncode = Base64Encode(log.CrawlLogUrl),
+                    CrawlLogRuleId = log.CrawlLogRuleId,
+                    CrawlLogDate = DateTime.Now,
+                    CrawlLogUnique = Base64Encode(log.CrawlLogUrl) + "@" + rule.CrawlRuleId.ToString()
+                });
+                if (_result.Count > 0)
                 {
-                    webClient.Encoding = Encoding.UTF8;
-                    content = webClient.DownloadString(log.CrawlLogUrl);
-                    foreach (var subrule in subrules)
+                    var subrules = db.CrawlRules.Where(o => o.CrawlParentId == log.CrawlLogRuleId);
+                    for (int i = 0; i < _result.Count; i++)
                     {
-                        bool _needqueue = db.CrawlRules.Count(o => o.CrawlParentId == subrule.CrawlRuleId) > 0 ? true : false;
-                        List<string> _result = RuleExcecute(subrule, content);
-                        for (int i = 0; i < _result.Count; i++)
+                        if (!string.IsNullOrEmpty(rule.CrawlRuleReplace))
                         {
-                            CrawlLog _log = new CrawlLog() { CrawlLogUrl = _result[i], CrawlLogRuleId = subrule.CrawlRuleId, CrawlLogUrlEncode = Base64Encode(_result[i]) };
-                            if (_needqueue) logs.Enqueue(_log);
-                            db.CrawlLogs.Add(_log);
+                            try
+                            {
+                                string[] partOfCrawlRuleReplace = rule.CrawlRuleReplace.Split(new char[] { ',' });
+                                _result[i] = _result[i].Replace(partOfCrawlRuleReplace[0], partOfCrawlRuleReplace[1]);
+                            }
+                            catch { }
                         }
-                        db.SaveChanges();
+                        if (subrules.Count() > 0)
+                        {
+                            try
+                            {
+                                foreach (CrawlRule subrule in subrules)
+                                {
+                                    if (!string.IsNullOrEmpty(rule.CrawlRuleJson) && rule.CrawlRuleJson.Contains("RUNONCE"))
+                                    {
+                                        string _urlUnique = Base64Encode(_result[i]) + "@" + subrule.CrawlRuleId.ToString();
+                                        if (db.CrawlLogs.Count(o => o.CrawlLogUnique == _urlUnique) > 0) continue;
+                                    }
+                                    CrawlLog _log = new CrawlLog() { CrawlLogUrl = _result[i], CrawlLogRuleId = subrule.CrawlRuleId };
+                                    logs.Push(_log);
+                                }
+                            }
+                            catch (Exception ex) { }
+                        }
+                        else
+                        {
+                            db.CrawlLogs.Add(new CrawlLog()
+                            {
+                                CrawlLogUrl = _result[i],
+                                CrawlLogUrlEncode = Base64Encode(_result[i]),
+                                CrawlLogRuleId = 0,
+                                CrawlLogDate = DateTime.Now,
+                                CrawlLogUnique = Base64Encode(log.CrawlLogUrl) + "@0"
+                            });
+                        }
                     }
                 }
+                db.SaveChanges();
             }
         }
         List<string> RuleExcecute(CrawlRule rule, string content)

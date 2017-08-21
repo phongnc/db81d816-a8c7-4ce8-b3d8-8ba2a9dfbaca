@@ -24,6 +24,18 @@ namespace ConsoleApplication1
                 .Property(e => e.CrawlLogUrlEncode)
                 .IsUnicode(false);
 
+            modelBuilder.Entity<CrawlLog>()
+                .Property(e => e.CrawlLogUnique)
+                .IsUnicode(false);
+
+            modelBuilder.Entity<CrawlLog>()
+                .Property(e => e.CrawlLogType)
+                .IsUnicode(false);
+
+            modelBuilder.Entity<CrawlLog>()
+                .Property(e => e.CrawlLogDate)
+                .HasPrecision(0);
+
             modelBuilder.Entity<CrawlSite>()
                 .Property(e => e.CrawlSiteUrl)
                 .IsUnicode(false);

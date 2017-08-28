@@ -108,20 +108,55 @@ namespace ConsoleApplication1
     {
         Model1 db = new Model1();
         CrawlSite site;
-        CrawlRule rootrule;
+        SiteNote siteNote;
         Stack<CrawlLog> logs;
+
         public CrawlClient(string title)
         {
             site = db.CrawlSites.First(o => o.CrawlSiteTitle == title);
-            rootrule = db.CrawlRules.First(o => o.CrawlSiteId == site.CrawlSiteId && o.CrawlRuleFor == "Root");
-            List<CrawlRule> rules = db.CrawlRules.Where(o => o.CrawlParentId == rootrule.CrawlRuleId).ToList();
-            logs = new Stack<CrawlLog>();
             if (string.IsNullOrEmpty(site.CrawlSiteUrl)) return;
             if (site.CrawlSiteUrl.Length < 2) return;
+            List<CrawlRule> rules = new List<CrawlRule>();
+            try
+            {
+                var ruleRoot = db.CrawlRules.First(o => o.CrawlSiteId == site.CrawlSiteId && o.CrawlRuleFor == "Root");
+                rules = db.CrawlRules.Where(o => o.CrawlParentId == ruleRoot.CrawlRuleId).ToList();
+            }
+            catch { }
             if (rules.Count == 0) return;
-            foreach (CrawlRule rule in rules) logs.Push(new CrawlLog() { CrawlLogUrl = site.CrawlSiteUrl, CrawlLogRuleId = rule.CrawlRuleId });
-            while (logs.Count > 0)
-                ProcessQueue();
+            siteNote = new SiteNote();
+            try
+            {
+                CrawlRule ruleMenu = rules.First(o => o.CrawlRuleFor == "Menu");
+                CrawlRule rulePage = rules.First(o => o.CrawlRuleFor == "Page");
+                List<CrawlRule> otherRules = rules.Where(o => (o.CrawlRuleFor != "Menu") && (o.CrawlRuleFor != "Page")).ToList();
+                if (rulePage.CrawlRuleNote.Contains("AUTOINC"))
+                {
+                    siteNote.IsAutoInc = true;
+                    siteNote.UrlFormat = rulePage.CrawlRuleFormat;
+                }
+                else if (rulePage.CrawlRuleNote.Contains("MANUAL"))
+                {
+                    siteNote.IsAutoInc = false;
+                    siteNote.UrlFormat = rulePage.CrawlRuleFormat;
+                }
+                using (WebClient webClient = new WebClient())
+                {
+                    webClient.Encoding = Encoding.UTF8;
+                    string content = webClient.DownloadString(site.CrawlSiteUrl);
+                    siteNote.MenuList = RuleExcecute(ruleMenu, content);
+                    siteNote.CurrentPage = 0;
+                    siteNote.CurrentMenu = 0;
+                    siteNote.NextPageString = "";
+                    string crawlLogUrl = siteNote.OnNext(true);
+
+                    logs = new Stack<CrawlLog>();
+                    foreach (CrawlRule rule in otherRules) logs.Push(new CrawlLog() { CrawlLogUrl = crawlLogUrl, CrawlLogRuleId = rule.CrawlRuleId });
+                }
+                while (logs.Count > 0)
+                    ProcessQueue();
+            }
+            catch (Exception ex) { }
         }
         void ProcessQueue()
         {
@@ -144,6 +179,11 @@ namespace ConsoleApplication1
                 });
                 if (_result.Count > 0)
                 {
+                    if (rule.CrawlRuleFor == "Paging")
+                    {
+                        string str = siteNote.OnNext(_result.Count > 0);
+                        if (!string.IsNullOrEmpty(str)) logs.Push(new CrawlLog() { CrawlLogUrl = str, CrawlLogRuleId = rule.CrawlRuleId });
+                    }
                     var subrules = db.CrawlRules.Where(o => o.CrawlParentId == log.CrawlLogRuleId);
                     for (int i = 0; i < _result.Count; i++)
                     {
@@ -162,7 +202,7 @@ namespace ConsoleApplication1
                             {
                                 foreach (CrawlRule subrule in subrules)
                                 {
-                                    if (!string.IsNullOrEmpty(rule.CrawlRuleJson) && rule.CrawlRuleJson.Contains("RUNONCE"))
+                                    if (!string.IsNullOrEmpty(rule.CrawlRuleNote) && rule.CrawlRuleNote.Contains("RUNONCE"))
                                     {
                                         string _urlUnique = Base64Encode(_result[i]) + "@" + subrule.CrawlRuleId.ToString();
                                         if (db.CrawlLogs.Count(o => o.CrawlLogUnique == _urlUnique) > 0) continue;
@@ -186,6 +226,7 @@ namespace ConsoleApplication1
                         }
                     }
                 }
+
                 db.SaveChanges();
             }
         }
@@ -195,7 +236,7 @@ namespace ConsoleApplication1
             var parser = new HtmlParser();
             var document = parser.Parse(content);
             var list = document.Body.QuerySelectorAll(rule.CrawlRuleQuery);
-            if (rule.CrawlRuleFor == "List")
+            if (rule.CrawlRuleClass == "List")
             {
                 foreach (var item in list)
                 {
@@ -204,7 +245,7 @@ namespace ConsoleApplication1
                         try
                         {
                             var _a = (AngleSharp.Dom.Html.IHtmlAnchorElement)item;
-                            result.Add(_a.Href);
+                            result.Add(_a.Href.Replace(@"about://", ""));
                         }
                         catch { }
                     }
@@ -213,7 +254,7 @@ namespace ConsoleApplication1
                         try
                         {
                             var _a = (AngleSharp.Dom.Html.IHtmlImageElement)item;
-                            result.Add(_a.Source);
+                            result.Add(_a.Source.Replace(@"about://", ""));
                         }
                         catch { }
                     }

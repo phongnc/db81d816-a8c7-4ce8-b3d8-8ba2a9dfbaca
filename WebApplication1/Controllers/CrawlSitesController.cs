@@ -67,8 +67,14 @@ namespace WebApplication1.Controllers
             {
                 db.CrawlSites.Add(crawlSite);
                 db.SaveChanges();
-                CrawlRule rule = new CrawlRule() { CrawlSiteId = crawlSite.CrawlSiteId, CrawlParentId = 0, CrawlRuleFor = "Root", CrawlRuleQuery = "" };
-                db.CrawlRules.Add(rule);
+                CrawlRule ruleRoot = new CrawlRule() { CrawlSiteId = crawlSite.CrawlSiteId, CrawlParentId = 0, CrawlRuleFor = "Root", CrawlRuleQuery = "" };
+                db.CrawlRules.Add(ruleRoot);
+                db.SaveChanges();
+                CrawlRule ruleMenu = new CrawlRule() { CrawlSiteId = crawlSite.CrawlSiteId, CrawlParentId = ruleRoot.CrawlRuleId, CrawlRuleFor = "Menu", CrawlRuleQuery = "" };
+                db.CrawlRules.Add(ruleMenu);
+                db.SaveChanges();
+                CrawlRule rulePage = new CrawlRule() { CrawlSiteId = crawlSite.CrawlSiteId, CrawlParentId = ruleRoot.CrawlRuleId, CrawlRuleFor = "Page", CrawlRuleQuery = "" };
+                db.CrawlRules.Add(rulePage);
                 db.SaveChanges();
                 return RedirectToAction("Index");
             }

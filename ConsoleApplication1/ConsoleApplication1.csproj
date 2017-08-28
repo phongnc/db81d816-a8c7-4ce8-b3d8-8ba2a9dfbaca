@@ -215,6 +215,7 @@
     <Compile Include="CrawlLog.cs" />
     <Compile Include="CrawlRule.cs" />
     <Compile Include="CrawlSite.cs" />
+    <Compile Include="Model0.cs" />
     <Compile Include="Model1.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

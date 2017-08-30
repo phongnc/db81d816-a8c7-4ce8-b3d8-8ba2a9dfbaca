@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Net;
 
@@ -113,7 +114,8 @@ namespace ConsoleApplication1
 
         public CrawlClient(string title)
         {
-            site = db.CrawlSites.First(o => o.CrawlSiteTitle == title);
+            try { site = db.CrawlSites.First(o => o.CrawlSiteTitle == title); }
+            catch { return; }
             if (string.IsNullOrEmpty(site.CrawlSiteUrl)) return;
             if (site.CrawlSiteUrl.Length < 2) return;
             List<CrawlRule> rules = new List<CrawlRule>();
@@ -129,32 +131,44 @@ namespace ConsoleApplication1
             {
                 CrawlRule ruleMenu = rules.First(o => o.CrawlRuleFor == "Menu");
                 CrawlRule rulePage = rules.First(o => o.CrawlRuleFor == "Page");
-                List<CrawlRule> otherRules = rules.Where(o => (o.CrawlRuleFor != "Menu") && (o.CrawlRuleFor != "Page")).ToList();
-                if (rulePage.CrawlRuleNote.Contains("AUTOINC"))
+                List<CrawlRule> otherRules = rules.Where(o => (o.CrawlRuleFor != "Menu") && (o.CrawlRuleFor != "Page") && (o.CrawlRuleFor != "File")).ToList();
+                try
                 {
-                    siteNote.IsAutoInc = true;
-                    siteNote.UrlFormat = rulePage.CrawlRuleFormat;
+                    if (rulePage.CrawlRuleNote.Contains("AUTOINC"))
+                    {
+                        siteNote.IsAutoInc = true;
+                        siteNote.UrlFormat = rulePage.CrawlRuleFormat;
+                    }
+                    else if (rulePage.CrawlRuleNote.Contains("MANUAL"))
+                    {
+                        siteNote.IsAutoInc = false;
+                        siteNote.UrlFormat = rulePage.CrawlRuleFormat;
+                    }
                 }
-                else if (rulePage.CrawlRuleNote.Contains("MANUAL"))
-                {
-                    siteNote.IsAutoInc = false;
-                    siteNote.UrlFormat = rulePage.CrawlRuleFormat;
-                }
+                catch { }
                 using (WebClient webClient = new WebClient())
                 {
                     webClient.Encoding = Encoding.UTF8;
                     string content = webClient.DownloadString(site.CrawlSiteUrl);
-                    siteNote.MenuList = RuleExcecute(ruleMenu, content);
+                    siteNote.MenuList = RuleExecute(ruleMenu, content);
                     siteNote.CurrentPage = 0;
                     siteNote.CurrentMenu = 0;
                     siteNote.NextPageString = "";
                     string crawlLogUrl = siteNote.OnNext(true);
 
                     logs = new Stack<CrawlLog>();
-                    foreach (CrawlRule rule in otherRules) logs.Push(new CrawlLog() { CrawlLogUrl = crawlLogUrl, CrawlLogRuleId = rule.CrawlRuleId });
+                    foreach (CrawlRule rule in otherRules)
+                        if (!IsChecked(crawlLogUrl, rule.CrawlRuleId))
+                            logs.Push(new CrawlLog() { CrawlLogUrl = crawlLogUrl, CrawlLogRuleId = rule.CrawlRuleId });
+                    try
+                    {
+                        CrawlRule ruleFile = rules.First(o => o.CrawlRuleFor == "File");
+                        logs.Push(new CrawlLog() { CrawlLogUrl = site.CrawlSiteUrl, CrawlLogRuleId = ruleFile.CrawlRuleId });
+                    }
+                    catch { }
                 }
                 while (logs.Count > 0)
-                    ProcessQueue();
+                    try { ProcessQueue(); } catch { }
             }
             catch (Exception ex) { }
         }
@@ -168,21 +182,32 @@ namespace ConsoleApplication1
             using (WebClient webClient = new WebClient())
             {
                 webClient.Encoding = Encoding.UTF8;
-                content = webClient.DownloadString(log.CrawlLogUrl);
-                List<string> _result = RuleExcecute(rule, content);
-                db.CrawlLogs.Add(new CrawlLog() {
-                    CrawlLogUrl = log.CrawlLogUrl,
-                    CrawlLogUrlEncode = Base64Encode(log.CrawlLogUrl),
-                    CrawlLogRuleId = log.CrawlLogRuleId,
-                    CrawlLogDate = DateTime.Now,
-                    CrawlLogUnique = Base64Encode(log.CrawlLogUrl) + "@" + rule.CrawlRuleId.ToString()
-                });
+                try { content = webClient.DownloadString(log.CrawlLogUrl); } catch { }
+                List<string> _result = new List<string>();
+                if (rule.CrawlRuleFor == "File")
+                    _result = RuleExecute(rule.CrawlRuleFormat, log.CrawlLogUrl, content);
+                else
+                    _result = RuleExecute(rule, content);
+                if (!IsChecked(log.CrawlLogUrl, log.CrawlLogRuleId.Value))
+                {
+                    db.CrawlLogs.Add(new CrawlLog()
+                    {
+                        CrawlLogUrl = log.CrawlLogUrl,
+                        CrawlLogUrlEncode = Base64Encode(log.CrawlLogUrl),
+                        CrawlLogRuleId = log.CrawlLogRuleId,
+                        CrawlLogDate = DateTime.Now,
+                        CrawlLogUnique = Base64Encode(log.CrawlLogUrl) + "@" + rule.CrawlRuleId.ToString()
+                    });
+                    Download(log.CrawlLogUrl);
+                }
                 if (_result.Count > 0)
                 {
                     if (rule.CrawlRuleFor == "Paging")
                     {
                         string str = siteNote.OnNext(_result.Count > 0);
-                        if (!string.IsNullOrEmpty(str)) logs.Push(new CrawlLog() { CrawlLogUrl = str, CrawlLogRuleId = rule.CrawlRuleId });
+                        if (!string.IsNullOrEmpty(str))
+                            if (!IsChecked(log.CrawlLogUrl, log.CrawlLogRuleId.Value))
+                                logs.Push(new CrawlLog() { CrawlLogUrl = str, CrawlLogRuleId = rule.CrawlRuleId });
                     }
                     var subrules = db.CrawlRules.Where(o => o.CrawlParentId == log.CrawlLogRuleId);
                     for (int i = 0; i < _result.Count; i++)
@@ -202,27 +227,29 @@ namespace ConsoleApplication1
                             {
                                 foreach (CrawlRule subrule in subrules)
                                 {
-                                    if (!string.IsNullOrEmpty(rule.CrawlRuleNote) && rule.CrawlRuleNote.Contains("RUNONCE"))
-                                    {
-                                        string _urlUnique = Base64Encode(_result[i]) + "@" + subrule.CrawlRuleId.ToString();
-                                        if (db.CrawlLogs.Count(o => o.CrawlLogUnique == _urlUnique) > 0) continue;
-                                    }
                                     CrawlLog _log = new CrawlLog() { CrawlLogUrl = _result[i], CrawlLogRuleId = subrule.CrawlRuleId };
-                                    logs.Push(_log);
+                                    if (!IsChecked(log.CrawlLogUrl, log.CrawlLogRuleId.Value)) logs.Push(_log);
                                 }
                             }
                             catch (Exception ex) { }
                         }
                         else
                         {
-                            db.CrawlLogs.Add(new CrawlLog()
+                            if (rule.CrawlRuleFor == "File")
                             {
-                                CrawlLogUrl = _result[i],
-                                CrawlLogUrlEncode = Base64Encode(_result[i]),
-                                CrawlLogRuleId = 0,
-                                CrawlLogDate = DateTime.Now,
-                                CrawlLogUnique = Base64Encode(log.CrawlLogUrl) + "@0"
-                            });
+                                CrawlLog _log = new CrawlLog() { CrawlLogUrl = _result[i], CrawlLogRuleId = rule.CrawlRuleId };
+                                if (!IsChecked(log.CrawlLogUrl, log.CrawlLogRuleId.Value)) logs.Push(_log);
+                            }
+                            else
+                            if (!IsChecked(_result[i], 0))
+                                db.CrawlLogs.Add(new CrawlLog()
+                                {
+                                    CrawlLogUrl = _result[i],
+                                    CrawlLogUrlEncode = Base64Encode(_result[i]),
+                                    CrawlLogRuleId = 0,
+                                    CrawlLogDate = DateTime.Now,
+                                    CrawlLogUnique = Base64Encode(log.CrawlLogUrl) + "@0"
+                                });
                         }
                     }
                 }
@@ -230,41 +257,85 @@ namespace ConsoleApplication1
                 db.SaveChanges();
             }
         }
-        List<string> RuleExcecute(CrawlRule rule, string content)
+        List<string> RuleExecute(CrawlRule rule, string content)
         {
             List<string> result = new List<string>();
-            var parser = new HtmlParser();
-            var document = parser.Parse(content);
-            var list = document.Body.QuerySelectorAll(rule.CrawlRuleQuery);
-            if (rule.CrawlRuleClass == "List")
+            try
             {
-                foreach (var item in list)
+                var parser = new HtmlParser();
+                var document = parser.Parse(content);
+                var list = document.Body.QuerySelectorAll(rule.CrawlRuleQuery);
+                if (rule.CrawlRuleClass == "List")
                 {
-                    if (rule.CrawlRuleTag == "Anchor")
+                    foreach (var item in list)
                     {
-                        try
+                        if (rule.CrawlRuleTag == "Anchor")
                         {
-                            var _a = (AngleSharp.Dom.Html.IHtmlAnchorElement)item;
-                            result.Add(_a.Href.Replace(@"about://", ""));
+                            try
+                            {
+                                var _a = (AngleSharp.Dom.Html.IHtmlAnchorElement)item;
+                                result.Add(_a.Href.Replace(@"about://", ""));
+                            }
+                            catch { }
                         }
-                        catch { }
-                    }
-                    else if (rule.CrawlRuleTag == "Image")
-                    {
-                        try
+                        else if (rule.CrawlRuleTag == "Image")
                         {
-                            var _a = (AngleSharp.Dom.Html.IHtmlImageElement)item;
-                            result.Add(_a.Source.Replace(@"about://", ""));
+                            try
+                            {
+                                var _a = (AngleSharp.Dom.Html.IHtmlImageElement)item;
+                                result.Add(_a.Source.Replace(@"about://", ""));
+                            }
+                            catch { }
                         }
-                        catch { }
                     }
                 }
-            }
-            else
-            {
+                else
+                {
 
+                }
             }
+            catch { }
             return result;
+        }
+        List<string> RuleExecute(string baseurl, string url, string content)
+        {
+            string urlRegex = @"(\\)?(\""|\')+([\w\.\/\s-]+)[\w,\s-]+\.[\w]{2,5}(\\)?(\""|\')+";
+            Regex regex = new Regex(urlRegex);
+            MatchCollection matches= regex.Matches(content);
+            List<string> results = new List<string>();
+            try
+            {
+                Uri absolute = new Uri(url);
+                for (int i = 0; i < matches.Count; i++)
+                {
+                    string str = matches[i].Value;
+                    str = str.Replace("\"", "").Replace("'", "").Replace("/./", "/../");
+                    if (str.StartsWith("./")) str = "." + str;
+                    Uri result = new Uri(absolute, str);
+                    if (str.StartsWith(".") || str.StartsWith("/"))
+                        results.Add(result.ToString());
+                    else
+                        results.Add(baseurl + str);
+                }
+            }
+            catch { }
+            return results;
+        }
+        bool IsChecked(string crawlLogUrl, int crawlLogRuleId)
+        {
+            string unique = Base64Encode(crawlLogUrl) + "@" + crawlLogRuleId.ToString();
+            if (db.CrawlLogs.Count(o => o.CrawlLogUnique == unique) > 0) return true;
+            return false;
+        }
+        void Download(string crawlLogUrl)
+        {
+            try
+            {
+                WebClient webClient = new WebClient();
+                new System.IO.FileInfo(crawlLogUrl.Replace("http://","F:\\S\\").Replace("https://", "F:\\S\\")).Directory.Create();
+                webClient.DownloadFileAsync(new Uri(crawlLogUrl), crawlLogUrl.Replace("http://", "F:\\S\\").Replace("https://", "F:\\S\\"));
+            }
+            catch (Exception ex) { }
         }
         string Base64Encode(string data)
         {

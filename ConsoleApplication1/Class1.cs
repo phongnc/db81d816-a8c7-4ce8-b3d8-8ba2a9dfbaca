@@ -175,6 +175,7 @@ namespace ConsoleApplication1
         void ProcessQueue()
         {
             var log = logs.Pop();
+            if (IsChecked(log.CrawlLogUrl, log.CrawlLogRuleId.Value)) return;
             var rule = db.CrawlRules.First(o => o.CrawlRuleId == log.CrawlLogRuleId);
             if (string.IsNullOrEmpty(log.CrawlLogUrl)) return;
             if (log.CrawlLogUrl.Length < 2) return;
@@ -238,7 +239,8 @@ namespace ConsoleApplication1
                             if (rule.CrawlRuleFor == "File")
                             {
                                 CrawlLog _log = new CrawlLog() { CrawlLogUrl = _result[i], CrawlLogRuleId = rule.CrawlRuleId };
-                                if (!IsChecked(log.CrawlLogUrl, log.CrawlLogRuleId.Value)) logs.Push(_log);
+                                if (!IsChecked(_log.CrawlLogUrl, _log.CrawlLogRuleId.Value))
+                                    logs.Push(_log);
                             }
                             else
                             if (!IsChecked(_result[i], 0))
@@ -254,7 +256,7 @@ namespace ConsoleApplication1
                     }
                 }
 
-                db.SaveChanges();
+                try { db.SaveChanges(); } catch (Exception ex) { }
             }
         }
         List<string> RuleExecute(CrawlRule rule, string content)
@@ -323,8 +325,24 @@ namespace ConsoleApplication1
         }
         bool IsChecked(string crawlLogUrl, int crawlLogRuleId)
         {
-            string unique = Base64Encode(crawlLogUrl) + "@" + crawlLogRuleId.ToString();
-            if (db.CrawlLogs.Count(o => o.CrawlLogUnique == unique) > 0) return true;
+            try
+            {
+                string unique = Base64Encode(crawlLogUrl) + "@" + crawlLogRuleId.ToString();
+                if (db.CrawlLogs.Count(o => o.CrawlLogUnique == unique) > 0) return true;
+            }
+            catch { }
+            if (IsIgnore(crawlLogUrl)) return true;
+            return false;
+        }
+        bool IsIgnore(string crawlLogUrl)
+        {
+            try
+            {
+                var uri = new Uri(crawlLogUrl);
+                if (uri.Host.Contains("google") || uri.Host.Contains("gstatic"))
+                    return true;
+            }
+            catch { }
             return false;
         }
         void Download(string crawlLogUrl)
@@ -332,8 +350,16 @@ namespace ConsoleApplication1
             try
             {
                 WebClient webClient = new WebClient();
-                new System.IO.FileInfo(crawlLogUrl.Replace("http://","F:\\S\\").Replace("https://", "F:\\S\\")).Directory.Create();
-                webClient.DownloadFileAsync(new Uri(crawlLogUrl), crawlLogUrl.Replace("http://", "F:\\S\\").Replace("https://", "F:\\S\\"));
+                new System.IO.FileInfo(crawlLogUrl.Replace("http://","D:\\S\\").Replace("https://", "D:\\S\\")).Directory.Create();
+                string fileName = crawlLogUrl.Replace("http://", "D:\\S\\").Replace("https://", "D:\\S\\");
+                if (fileName.EndsWith("/"))
+                { string content = webClient.DownloadString(new Uri(crawlLogUrl));
+                    System.IO.StreamWriter file = new System.IO.StreamWriter(fileName += "index.html");
+                    file.WriteLine(content);
+                    file.Close();
+                }
+                else
+                    webClient.DownloadFileAsync(new Uri(crawlLogUrl), fileName);
             }
             catch (Exception ex) { }
         }

@@ -40,17 +40,21 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Accessibility" />
-    <Reference Include="FirstFloor.ModernUI">
+    <Reference Include="FirstFloor.ModernUI, Version=1.0.4.0, Culture=neutral, PublicKeyToken=2d21ec3cd074c59a, processorArchitecture=MSIL">
       <HintPath>..\packages\ModernUI.WPF.1.0.4\lib\net45\FirstFloor.ModernUI.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="OxyPlot">
+    <Reference Include="OxyPlot, Version=2013.1.49.1, Culture=neutral, PublicKeyToken=638079a8f0bd61e9, processorArchitecture=MSIL">
       <HintPath>..\packages\OxyPlot.Core.2013.1.49.1\lib\portable-net4+sl4+wp71+win8\OxyPlot.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="OxyPlot.Wpf">
+    <Reference Include="OxyPlot.Wpf, Version=2013.1.49.1, Culture=neutral, PublicKeyToken=75e952ba404cdbb0, processorArchitecture=MSIL">
       <HintPath>..\packages\OxyPlot.Wpf.2013.1.49.1\lib\NET45\OxyPlot.Wpf.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="OxyPlot.Xps">
+    <Reference Include="OxyPlot.Xps, Version=2013.1.49.1, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\OxyPlot.Wpf.2013.1.49.1\lib\NET45\OxyPlot.Xps.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="PresentationUI, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="ReachFramework" />

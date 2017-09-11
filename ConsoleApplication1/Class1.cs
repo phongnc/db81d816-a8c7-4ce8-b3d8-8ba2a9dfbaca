@@ -228,7 +228,7 @@ namespace ConsoleApplication1
                                 foreach (CrawlRule subrule in subrules)
                                 {
                                     CrawlLog _log = new CrawlLog() { CrawlLogUrl = _result[i], CrawlLogRuleId = subrule.CrawlRuleId };
-                                    if (!IsChecked(log.CrawlLogUrl, log.CrawlLogRuleId.Value)) logs.Push(_log);
+                                    if (!IsChecked(_log.CrawlLogUrl, _log.CrawlLogRuleId.Value)) logs.Push(_log);
                                 }
                             }
                             catch (Exception ex) { }
@@ -238,7 +238,7 @@ namespace ConsoleApplication1
                             if (rule.CrawlRuleFor == "File")
                             {
                                 CrawlLog _log = new CrawlLog() { CrawlLogUrl = _result[i], CrawlLogRuleId = rule.CrawlRuleId };
-                                if (!IsChecked(log.CrawlLogUrl, log.CrawlLogRuleId.Value)) logs.Push(_log);
+                                if (!IsChecked(_log.CrawlLogUrl, _log.CrawlLogRuleId.Value)) logs.Push(_log);
                             }
                             else
                             if (!IsChecked(_result[i], 0))
